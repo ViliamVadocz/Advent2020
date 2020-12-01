@@ -1,0 +1,45 @@
+# https://adventofcode.com/2020/day/1
+
+input := $input
+
+yes := 1 > 0
+no := !yes
+
+find := (elem) {
+    (index) {
+        index = |input| -> no
+        input[index] = elem || @(index + 1)
+    } (0)
+}
+
+smallest := (index, smallest) {
+    index = |input| -> smallest
+    elem := input[index]
+    elem < smallest -> @(index + 1, elem)
+    @(index + 1, smallest)
+} (1, input[0])
+
+find_pair := (up_to) {
+    at_most := up_to - smallest
+
+    (index) {
+        elem := input[index]
+        index = |input| -> no, -1, -1, -1
+        elem > at_most -> @(index + 1)
+        pair := up_to - elem
+        find(pair) -> yes, elem * pair, elem, pair
+        @(index + 1)
+    } (0)
+}
+
+# part 1
+# find_pair(2020)
+
+# part 2
+(index) {
+    index = |input| -> no, -1, -1, -1, -1
+    elem := input[index]
+    found, prod, num1, num2 := find_pair(2020 - elem)
+    found -> yes, prod * elem, elem, num1, num2
+    @(index + 1)
+} (0)
