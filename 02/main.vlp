@@ -1,0 +1,95 @@
+parse_int, int_to_char := $parse
+
+index := (arr, elem) {
+    (index) {
+        index = |arr| -> -1
+        arr[index] = elem -> index
+        @(index + 1)
+    } (0)
+}
+
+write := (buffer, input, start, end) {
+    (index, buffer) {
+        index + start = end -> buffer, end - start
+        buffer[index] := input[index + start]
+        @(index + 1, buffer)
+    } (0, buffer)
+}
+
+parse_rule := (buffer, len) {
+    letter := buffer[len - 1]
+    sep := index(buffer, '-')
+    end := index(buffer, ' ')
+    a := parse_int(write(['\x00'; 2], buffer, 0, sep))
+    b := parse_int(write(['\x00'; 2], buffer, sep + 1, end))
+    letter, a, b
+}
+
+parse_line := (buffer, len) {
+    sep := index(buffer, ':')
+    rule := write(['\x00'; 8], buffer, 0, sep)
+    password := write(['\x00'; 24], buffer, sep + 2, len)
+    rule, password
+}
+
+read_line := (file) {
+    (buffer, index, file) {
+        index = |buffer| -> buffer, index
+        $$stdio\feof(file) != 0 -> buffer, index
+        char := {
+            i := $$stdio\fgetc(file)
+            _ := $$stdio\putchar(i)
+            int_to_char(i)
+        }
+        char = '\n' -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1, file)
+    } (['\x00'; 32], 0, file)
+}
+
+# part 1
+# check := (rule, password) {
+#     letter, min, max := rule
+#     buffer, len := password
+#     count := (index, count) {
+#         index = len -> count
+#         buffer[index] = letter -> @(index + 1, count + 1)
+#         @(index + 1, count)
+#     } (0, 0)
+#     min <= count <= max
+# }
+
+# part 2
+xor := (a, b) {
+    a && !b || b && !a
+}
+false := 0 != 0
+check := (rule, password) {
+    letter, pos1, pos2 := rule
+    buffer, len := password
+    # _ := $$stdio\puts(&buffer)
+    # _ := $$stdio\puts(&[buffer[pos1 - 1], '\x00'])
+    # _ := $$stdio\puts(&[buffer[pos2 - 1], '\x00'])
+    pos1 > len -> false
+    pos2 > len -> buffer[pos1 - 1] = letter 
+    xor(buffer[pos1 - 1] = letter, buffer[pos2 - 1] = letter)
+}
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+
+count := (count, file) {
+    # pos := $$stdio\ftell(file)
+    $$stdio\feof(file) != 0 -> {
+        _ := $$stdio\fclose(file)
+        count
+    }
+    line := read_line(file)
+    rule, password := parse_line(line)
+    valid := check(parse_rule(rule), password)
+    @({valid -> count + 1; count}, file)
+} (0, file)
+
+_ := $$stdio\putchar(10)
+count
+
+
