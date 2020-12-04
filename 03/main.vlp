@@ -1,0 +1,39 @@
+false := 0 != 0
+SEEK_SET := 0
+
+is_tree := (x, y, file) {
+    # beyond the slope (323 rows)
+    y > 322 -> false
+    # trees repeat to the right (31 columns)
+    x %= 31
+    $$stdio\fseek(file, 31*y + x, SEEK_SET) != 0 -> {
+        _ := $$stdio\puts(&"couldn't seek")
+        false
+    }
+    char := $$stdio\fgetc(file)
+    _ := $$stdio\putchar(char)
+    char = 35
+}
+
+how_many_trees := (slope) {
+    file := $$stdio\fopen(&"input.txt\0", &"r\0")
+    right: right, down: down := slope
+    (count, x, y) {
+        y > 322 -> {
+            _ := $$stdio\fclose(file)
+            count
+        }
+        count := {is_tree(x, y, file) -> count + 1; count}
+        @(count, x + right, y + down)
+    } (0, 0, 0)
+}
+
+a := how_many_trees(right: 1, down: 1)
+b := how_many_trees(right: 3, down: 1)
+c := how_many_trees(right: 5, down: 1)
+d := how_many_trees(right: 7, down: 1)
+e := how_many_trees(right: 1, down: 2)
+
+_ := $$stdio\putchar(10)
+
+a, b, c, d, e, a * b * c * d * e
