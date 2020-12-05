@@ -1,0 +1,121 @@
+# byr (Birth Year)
+# iyr (Issue Year)
+# eyr (Expiration Year)
+# hgt (Height)
+# hcl (Hair Color)
+# ecl (Eye Color)
+# pid (Passport ID)
+# cid (Country ID) (optional)
+
+int_to_char := $parse.int_to_char
+validate_byr,
+validate_iyr,
+validate_eyr,
+validate_hgt,
+validate_hcl,
+validate_ecl,
+validate_pid := $validate
+
+true := 1 > 0
+false := !true
+
+# find substring in string
+find := (substr, str) {
+    (index, matches) {
+        matches = |substr| -> index - |substr|
+        index = |str| -> -1
+        str[index] = substr[matches] -> @(index + 1, matches + 1)
+        @(index + 1 - matches, 0)
+    } (0, 0)
+}
+
+write := (buffer, input, start, end_char) {
+    (index, buffer) {
+        char := input[index + start]
+        char = end_char || index = |buffer| -> buf: buffer, len: index
+        buffer[index] := char
+        @(index + 1, buffer)
+    } (0, buffer)
+}
+
+read_passport := (file) {
+    (buffer, index, file) {
+        $$stdio\feof(file) != 0 -> buffer
+        char := {
+            int := $$stdio\fgetc(file)
+            # _ := $$stdio\putchar(int)
+            int_to_char(int)
+        }
+        # two newlines mark the end of a passport
+        index > 0 && buffer[index - 1] = '\n' && char = '\n' -> buffer 
+        buffer[index] := char
+        @(buffer, index + 1, file)
+    } (['\x00'; 128], 0, file)
+}
+
+present := (pass) {
+    find("byr:", pass) != -1 && 
+    find("iyr:", pass) != -1 && 
+    find("eyr:", pass) != -1 && 
+    find("hgt:", pass) != -1 && 
+    find("hcl:", pass) != -1 && 
+    find("ecl:", pass) != -1 && 
+    find("pid:", pass) != -1
+    # find("cid:", pass) != -1
+}
+
+valid := (pass) {
+    byr_pos := find("byr:", pass)
+    iyr_pos := find("iyr:", pass) 
+    eyr_pos := find("eyr:", pass) 
+    hgt_pos := find("hgt:", pass) 
+    hcl_pos := find("hcl:", pass) 
+    ecl_pos := find("ecl:", pass) 
+    pid_pos := find("pid:", pass)
+    # cid_pos := find("cid:", pass)
+
+    byr_pos = -1 ||
+    iyr_pos = -1 ||
+    eyr_pos = -1 ||
+    hgt_pos = -1 ||
+    hcl_pos = -1 ||
+    ecl_pos = -1 ||
+    pid_pos = -1 -> false
+
+    byr_pos += 4
+    iyr_pos += 4 
+    eyr_pos += 4 
+    hgt_pos += 4 
+    hcl_pos += 4 
+    ecl_pos += 4 
+    pid_pos += 4
+
+    # TODO check correct length
+    byr := write(['\x00'; 10], pass, byr_pos, '\n')
+    iyr := write(['\x00'; 10], pass, iyr_pos, '\n')
+    eyr := write(['\x00'; 10], pass, eyr_pos, '\n')
+    hgt := write(['\x00'; 10], pass, hgt_pos, '\n')
+    hcl := write(['\x00'; 10], pass, hcl_pos, '\n')
+    ecl := write(['\x00'; 10], pass, ecl_pos, '\n')
+    pid := write(['\x00'; 10], pass, pid_pos, '\n')
+
+    validate_byr(byr) &&
+    validate_iyr(iyr) &&
+    validate_eyr(eyr) &&
+    validate_hgt(hgt) &&
+    validate_hcl(hcl) &&
+    validate_ecl(ecl) &&
+    validate_pid(pid)
+}
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+(count, file) {
+    $$stdio\feof(file) != 0 -> {
+        _ := $$stdio\fclose(file)
+        count
+    }
+    pass := read_passport(file)
+    # for part 1 just replace valid with present
+    valid(pass) -> @(count + 1, file)
+    @(count, file)
+} (0, file)

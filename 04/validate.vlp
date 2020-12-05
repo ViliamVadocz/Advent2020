@@ -1,0 +1,89 @@
+parse_int := $parse.parse_int
+
+validate_byr := (byr) {
+    buf: buffer, len: digits := byr
+    digits = 4 && (
+        1920 <= parse_int([buffer[0], buffer[1], buffer[2], buffer[3]], 4) <= 2002
+    )
+}
+
+validate_iyr := (iyr) {
+    buf: buffer, len: digits := iyr
+    digits = 4 && (
+        2010 <= parse_int([buffer[0], buffer[1], buffer[2], buffer[3]], 4) <= 2020
+    )
+}
+
+validate_eyr := (eyr) {
+    buf: buffer, len: digits := eyr
+    digits = 4 && (
+        2020 <= parse_int([buffer[0], buffer[1], buffer[2], buffer[3]], 4) <= 2030
+    )
+}
+
+validate_hgt := (hgt) {
+    buf: buffer, len: len := hgt
+    (buffer[len - 2] = 'c' && buffer[len - 1] = 'm') -> (
+        len - 2 = 3 && (150 <= parse_int([buffer[0], buffer[1], buffer[2]], 3) <= 193)
+    )
+    (buffer[len - 2] = 'i' && buffer[len - 1] = 'n') && (
+        len - 2 = 2 && (59 <= parse_int([buffer[0], buffer[1]], 2) <= 76)
+    )
+}
+
+dec_digit := (c) {
+    '0' <= c <= '9'
+}
+
+hex_digit := (c) {
+    dec_digit(c) || 'a' <= c <= 'f'
+}
+
+validate_hcl := (hcl) {
+    buf: buffer, len: len := hcl
+    len = 7 && buffer[0] = '#' &&
+    hex_digit(buffer[1]) && 
+    hex_digit(buffer[2]) && 
+    hex_digit(buffer[3]) && 
+    hex_digit(buffer[4]) && 
+    hex_digit(buffer[5]) &&
+    hex_digit(buffer[6])
+}
+
+
+equals := (a, b) {
+    |a| = |b| && (index) {
+        index = |a| || a[index] = b[index] && @(index + 1)
+    } (0)
+}
+
+validate_ecl := (ecl) {
+    buf: buffer, len: len := ecl
+    len = 3 && {
+        colour := [buffer[0], buffer[1], buffer[2]]
+        equals(colour, "amb") ||
+        equals(colour, "blu") ||
+        equals(colour, "brn") ||
+        equals(colour, "gry") ||
+        equals(colour, "grn") ||
+        equals(colour, "hzl") ||
+        equals(colour, "oth")
+    }
+}
+
+validate_pid := (pid) {
+    buf: buffer, len: digits := pid
+    digits = 9 && {
+        (index) {
+            index = 9 || dec_digit(buffer[index]) && @(index + 1)
+        } (0)
+    }
+}
+
+validate_byr,
+validate_iyr,
+validate_eyr,
+validate_hgt,
+validate_hcl,
+validate_ecl,
+validate_pid
