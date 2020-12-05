@@ -1,0 +1,57 @@
+find_pos := (pass) {
+    row := (index, min, max) {
+        min = max - 1 -> min
+        step := (max - min) / 2
+        pass[index] = 'B' -> @(index + 1, min + step, max)
+        @(index + 1, min, max - step)
+    } (0, 0, 128)
+    col := (index, min, max) {
+        min = max - 1 -> min
+        step := (max - min) / 2
+        pass[index] = 'R' -> @(index + 1, min + step, max)
+        @(index + 1, min, max - step)
+    } (7, 0, 8)
+    row, col
+}
+
+seat_id := (row, col) { 8 * row + col }
+
+int_to_char := $parse
+
+read_line := (file) {
+    (buffer, index) {
+        $$stdio\feof(file) != 0 -> buffer
+        char := int_to_char($$stdio\fgetc(file))
+        char = '\n' -> buffer
+        buffer[index] := char
+        @(buffer, index + 1)
+    } (['\x00'; 10], 0)
+}
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+# part 1
+# highest := (highest) {
+#     id := seat_id(find_pos(read_line(file)))
+#     $$stdio\feof(file) != 0 -> highest
+#     id > highest -> @(id)
+#     @(highest)
+# } (0)
+
+# part 2
+T := 1 > 0
+F := !T
+taken := (index, taken) {
+    id := seat_id(find_pos(read_line(file)))
+    $$stdio\feof(file) != 0 -> taken
+    taken[id] := T
+    @(index + 1, taken)
+} (0, [F; 1024])
+
+_ := $$stdio\fclose(file)
+
+my_id := (index) {
+    taken[index - 1] && !taken[index] && taken[index + 1] -> index
+    @(index + 1)
+} (1)
+
+my_id
