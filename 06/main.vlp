@@ -1,0 +1,73 @@
+T := 1 > 0
+F := !T
+
+# part 1
+# group_count := (file) {
+#     answered_yes := (answered_yes, prev_char_newline) {
+#         $$stdio\feof(file) != 0 -> answered_yes
+#         char := $$stdio\fgetc(file)
+#         # ascii '\n' = 10
+#         char = 10 -> {
+#             prev_char_newline -> answered_yes
+#             @(answered_yes, T)
+#         }
+#         # ascii 'a' = 97
+#         answered_yes[char - 97] := T
+#         @(answered_yes, F)
+#     } ([F; 26], F)
+
+#     (index, count) {
+#         index = |answered_yes| -> count
+#         answered_yes[index] -> @(index + 1, count + 1)
+#         @(index + 1, count)
+#     } (0, 0)
+# }
+
+arr_and := (a, b) {
+    (index, res) {
+        index = |a| -> res
+        res[index] := a[index] && b[index]
+        @(index + 1, res)
+    } (0, a)
+}
+
+# part 2
+group_count := (file) {
+    group := (group) {
+        $$stdio\feof(file) != 0 -> group
+
+        # check for double newline that indicates end of group
+        char := $$stdio\fgetc(file)
+        char = 10 -> group
+
+        person := [F; 26]
+        person[char - 97] := T
+
+        # find which answers they said yes to
+        person := (person) {
+            $$stdio\feof(file) != 0 -> person
+            char := $$stdio\fgetc(file)
+            char = 10 -> person
+            person[char - 97] := T
+            @(person)
+        } (person)
+
+        @(arr_and(group, person))
+    } ([T; 26])
+
+    (index, count) {
+        index = |group| -> count
+        group[index] -> @(index + 1, count + 1)
+        @(index + 1, count)
+    } (0, 0)
+}
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+(sum) {
+    sum += group_count(file)
+    $$stdio\feof(file) != 0 -> {
+        _ := $$stdio\fclose(file)
+        sum
+    }
+    @(sum)
+} (0)
