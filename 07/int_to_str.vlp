@@ -1,0 +1,13 @@
+digit := (n) {
+    "0123456789"[n % 10]
+}
+
+# up to 999999
+# ends with \0
+(n) {
+    (buffer, n, index) {
+        index < 0 -> buffer
+        buffer[index] := digit(n)
+        @(buffer, n / 10, index - 1)
+    } (['\x00'; 7], n, 5)
+}

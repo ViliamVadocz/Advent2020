@@ -1,0 +1,168 @@
+int_to_ascii := $parse
+int_to_str := $int_to_str
+
+print := (str) { $$stdio\puts(&str) }
+
+SEEK_SET := 0
+SEEK_CUR := 1
+
+starts_with := (str, substr) {
+    (index) {
+        index = |substr| || substr[index] = str[index] && @(index + 1)
+    } (0)
+}
+
+get_char := (file) { int_to_ascii($$stdio\fgetc(file)) }
+
+read_colour := (file) {
+    (buffer, index, spaces) {
+        char := get_char(file)
+        spaces += {char = ' ' || char = '\n' -> 1; 0}
+        # every colour is two words
+        $$stdio\feof(file) != 0 || spaces = 2 -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1, spaces)
+    } (['\x00'; 32], 0, 0)
+}
+
+input_file := $$stdio\fopen(&"input.txt\0", &"r\0")
+colour_file := $$stdio\fopen(&"colours.txt\0", &"wb\0")
+
+# go through each line to get an file with colours, so you can reference them by position in this file
+colours, shiny_gold := (colours, index, pos, shiny_gold) {
+    buffer, len := read_colour(input_file)
+    $$stdio\feof(input_file) != 0 -> colours, shiny_gold
+    _ := print(buffer)
+    _ := print(int_to_str(pos))
+
+    # track which index is shiny_gold
+    shiny_gold := {starts_with(buffer, "shiny gold") -> index; shiny_gold}
+
+    # write the colour into the file and track the position
+    colours[index] := pos
+    _ := $$stdio\fputs(&buffer, colour_file)
+    _ := $$stdio\fputc(10, colour_file) # newline
+
+    # skip to next line in input file
+    _ := $$stdio\fgets(&['\x00'; 128], 128, input_file)
+    
+    @(colours, index + 1, pos + len + 1, shiny_gold)
+} ([-1; 594], 0, 0, -1)
+
+_ := $$stdio\fclose(colour_file)
+
+# basically a dereference
+get_colour := (index) {
+    pos := colours[index]
+    colour_file := $$stdio\fopen(&"colours.txt\0", &"r\0")
+    _ := $$stdio\fseek(colour_file, pos, SEEK_SET)
+    res := read_colour(colour_file)
+    _ := $$stdio\fclose(colour_file)
+    res
+}
+
+identify_colour := (colour, len) {
+    (index) {
+        index = |colours| -> {
+            _ := print("couldn't identify colour:\0")
+            _ := print(colour)
+            -1
+        }
+        pos := colours[index]
+        check_colour, check_len := get_colour(pos)
+        _ := print(int_to_str(pos))
+        _ := print(check_colour)
+        len = check_len && starts_with(colour, check_colour) -> pos
+        @(index + 1)
+    } (0)
+}
+
+# reopen the file
+_ := $$stdio\fclose(colour_file)
+input_file := $$stdio\fopen(&"input.txt\0", &"r\0")
+# parse which colours are allowed inside which other
+a := [-1; |colours|]
+allowed := (allowed, index) {
+    c, _ := read_colour(input_file) # initial colour
+    _ := print("\0")
+    _ := read_colour(input_file) # "bags contain"
+    $$stdio\feof(input_file) != 0 -> allowed
+
+    num := get_char(input_file)
+    # no other bags
+    num = 'n' -> {
+        # skip to next line in input file
+        _ := $$stdio\fgets(&['\x00'; 128], 128, input_file)
+        @(allowed, index + 1)
+    }
+
+    # first bag type
+    _ := get_char(input_file) # space after the number
+    allowed._0[index] := identify_colour(read_colour(input_file))
+    _ := $$stdio\fseek(input_file, {num = '1' -> 3; 4}, SEEK_CUR) # "bag" or "bags"
+    char := get_char(input_file)
+    char = '.' -> { _ := get_char(input_file); @(allowed, index + 1) }
+    _ := get_char(input_file) # space after comma
+
+    # second bag type
+    num, _ := get_char(input_file), get_char(input_file)
+    allowed._0[index] := identify_colour(read_colour(input_file))
+    _ := $$stdio\fseek(input_file, {num = '1' -> 3; 4}, SEEK_CUR)
+    get_char(input_file) = '.' -> { _ := get_char(input_file); @(allowed, index + 1) }
+    _ := get_char(input_file)
+
+    # third
+    num, _ := get_char(input_file), get_char(input_file)
+    allowed._0[index] := identify_colour(read_colour(input_file))
+    _ := $$stdio\fseek(input_file, {num = '1' -> 3; 4}, SEEK_CUR)
+    get_char(input_file) = '.' -> { _ := get_char(input_file); @(allowed, index + 1) }
+    _ := get_char(input_file)
+
+    # last
+    num, _ := get_char(input_file), get_char(input_file)
+    allowed._0[index] := identify_colour(read_colour(input_file))
+    _ := $$stdio\fseek(input_file, {num = '1' -> 3; 4}, SEEK_CUR)
+    get_char(input_file) = '.' -> { _ := get_char(input_file); @(allowed, index + 1) }
+
+    _ := print("more than 4 bag types???\0")
+    _ := $$stdio\fgets(&['\x00'; 32], 32, input_file)
+    @(allowed, index + 1)
+} ({a, a, a, a}, 0)
+
+T := 1 > 0
+F := !T
+
+can_be_outer := [F; |colours|]
+can_be_outer[shiny_gold] := T
+can_be_outer := (index, can_be_outer) {
+    index = |can_be_outer| -> can_be_outer
+    rec_search := (checking, origin) {
+        # we looped back
+        checking = index && !origin -> F
+        # this is allowed, or recursively check
+        can_be_outer[checking] || {
+            a1 := allowed._0[checking]
+            a2 := allowed._1[checking]
+            a3 := allowed._2[checking]
+            a4 := allowed._3[checking]
+            a1 != -1 && @(a1, F) ||
+            a2 != -1 && @(a2, F) ||
+            a3 != -1 && @(a3, F) ||
+            a4 != -1 && @(a4, F)
+        }
+    }
+    can_be_outer[index] := rec_search(index, T)
+    @(index + 1, can_be_outer)
+} (0, can_be_outer)
+can_be_outer[shiny_gold] := F
+
+count := (count, index) {
+    index = |can_be_outer| -> count
+    can_be_outer[index] -> @(count + 1, index + 1)
+    @(count, index + 1)
+} (0, 0)
+
+_ := $$stdio\fclose(input_file)
+
+
+count
