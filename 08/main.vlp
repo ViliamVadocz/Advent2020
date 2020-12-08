@@ -1,0 +1,40 @@
+parse_int, int_to_char := $parse
+
+T := 1 > 0
+F := !T
+# represent nop as acc 0
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+
+get_char := () { int_to_char($$stdio\fgetc(file)) }
+
+read_line := () { 
+    first_char := get_char()
+    jump := first_char = 'j'
+    nop := first_char = 'n'
+    _ := get_char() # m
+    _ := get_char() # p
+    _ := get_char() # SPACE
+    sign := {get_char() = '+' -> 1; -1}
+    num := (buffer, index) {
+        char := get_char()
+        char = '\n' || $$stdio\feof(file) != 0 -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1)
+    } (['\x00'; 3], 0)
+    jump, {nop -> 0; sign * parse_int(num)}
+}
+
+jmp, amount := (jmp, amount, index) {
+    line := read_line()
+    index = |jmp| || $$stdio\feof(file) != 0 -> jmp, amount
+    jmp[index], amount[index] := line
+    @(jmp, amount, index + 1)
+} ([F; 660], [0; 660], 0)
+
+(visited, pos, acc) {
+    visited[pos] -> acc
+    visited[pos] := T
+    jmp[pos] -> @(visited, pos + amount[pos], acc)
+    @(visited, pos + 1, acc + amount[pos])
+} ([F; |jmp|], 0, 0)
