@@ -1,0 +1,57 @@
+parse_int, int_to_char := $parse
+true := 1 > 0
+false := !true
+
+
+get_char := (file) { int_to_char($$stdio\fgetc(file)) }
+
+read_line := (file) {
+    (buffer, index) {
+        char := get_char(file)
+        $$stdio\feof(file) != 0 || char = '\n' -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1)
+    } (['\x00'; 16], 0)
+}
+
+next_num := (file) { parse_int(read_line(file)) }
+
+check := (numbers, sum) {
+    (i, j) {
+        i = 25 -> false
+        j = 25 -> @(i + 1, i + 2)
+        numbers[i] + numbers[j] = sum -> true
+        @(i, j + 1)
+    } (0, 1)
+}
+
+# part 1
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+
+pos, target := (nums, pos) {
+    $$stdio\feof(file) != 0 -> -1, -1
+    num := next_num(file)
+    pos >= 25 && !check(nums, num) -> pos, num
+    nums[pos % 25] := num
+    @(nums, pos + 1)
+} ([0; 25], 0)
+
+_ := $$stdio\fclose(file)
+
+# part 2
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+
+mem_size := 500
+first, last := (memory, first, last, sum) {
+    sum = target -> memory[first % mem_size], memory[(last - 1) % mem_size]
+    first > last -> -2, -2
+    sum > target -> @(memory, first + 1, last, sum - memory[first % mem_size])
+    num := next_num(file)
+    $$stdio\feof(file) != 0 -> -1, -1
+    memory[last % mem_size] := num
+    @(memory, first, last + 1, sum + num)
+} ([0; 500], 0, 0, 0)
+
+_ := $$stdio\fclose(file)
+
+first, last, first + last
