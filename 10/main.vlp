@@ -1,0 +1,94 @@
+parse_int, int_to_char := $parse
+
+### from prev day
+get_char := (file) { int_to_char($$stdio\fgetc(file)) }
+
+read_line := (file) {
+    (buffer, index) {
+        char := get_char(file)
+        $$stdio\feof(file) != 0 || char = '\n' -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1)
+    } (['\x00'; 16], 0)
+}
+
+next_num := (file) { parse_int(read_line(file)) }
+###
+
+for_num := (start_args, func) {
+    file := $$stdio\fopen(&"input.txt\0", &"r\0")
+    args := (args) {
+        $$stdio\feof(file) != 0 -> args
+        @(func(args, next_num(file)))
+    } (start_args)
+    _ := $$stdio\fclose(file)
+    args
+}
+
+count, largest := for_num({
+    ([0; 200], 0),
+    ((count, before), num) {
+        count[num] += 1
+        count, {before > num -> before; num}
+    }
+})
+
+sorted := (num, arr, index) {
+    num = |count| -> arr
+    arr, index := (amount, arr, index) {
+        amount = 0 -> arr, index
+        arr[index] := num
+        @(amount - 1, arr, index + 1)
+    } (count[num], arr, index)
+    @(num + 1, arr, index)
+} (0, [0; 100], 0)
+
+# device joltage
+sorted[99] := largest + 3
+
+# part 1
+# (index, prev, jolt_jumps) {
+#     index = |sorted| -> jolt_jumps
+#     this := sorted[index]
+#     diff := this - prev
+#     0 < diff <= 3 -> {
+#         jolt_jumps[diff - 1] += 1
+#         @(index + 1, this, jolt_jumps)
+#     }
+#     [-1, -1, -1]
+# } (0, 0, [0, 0, 0])
+
+# part 2
+# use dynamic programming to count the number of ways
+# similar to "stairs interview problem", except you can go 1, 2, or 3, and some stairs are not available
+ways := [0; 200]
+ways[0] := 1
+(index, ways) {
+    index = largest -> ways[index]
+    current := ways[index]
+    current > 0 -> {
+        ways := {
+            index < 199 && count[index + 1] > 0 -> {
+                ways[index + 1] += current
+                ways
+            }
+            ways
+        }
+        ways := {
+            index < 198 && count[index + 2] > 0 -> {
+                ways[index + 2] += current
+                ways
+            }
+            ways
+        }
+        ways := {
+            index < 197 && count[index + 3] > 0 -> {
+                ways[index + 3] += current
+                ways
+            }
+            ways
+        }
+        @(index + 1, ways)
+    }
+    @(index + 1, ways)
+} (0, ways)
