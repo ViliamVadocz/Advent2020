@@ -1,0 +1,52 @@
+seats := $input
+elems := 8827
+cols := 91
+rows := 97
+
+T := 1 > 0
+F := !T
+
+all_match := (a, b) {
+    (index) {
+        index = |a| || {
+            a[index] -> b[index]
+            !b[index] 
+        } && @(index + 1)
+    } (0)
+}
+
+step := (occupied) {
+    check := (index) {
+        0 <= index < |occupied| && seats[index] && occupied[index]
+    }
+    (new, index) {
+        index = |new| -> new
+        !seats[index] -> @(new, index + 1)
+        count := 0
+        count += {check(index - cols - 1)   -> 1; 0}
+        count += {check(index - cols)       -> 1; 0}
+        count += {check(index - cols + 1)   -> 1; 0}
+        count += {check(index - 1)          -> 1; 0}
+        count += {check(index + 1)          -> 1; 0}
+        count += {check(index + cols - 1)   -> 1; 0}
+        count += {check(index + cols)       -> 1; 0}
+        count += {check(index + cols + 1)   -> 1; 0}
+        new[index] := {
+            occupied[index] -> count < 4
+            count = 0
+        }
+        @(new, index + 1)
+    } ([F; |seats|], 0)
+}
+
+occupied := (occupied) {
+    new := step(occupied)
+    all_match(occupied, new) -> new
+    @(new)
+} ([F; |seats|])
+
+(index, count) {
+    index = |occupied| -> count
+    occupied[index] -> @(index + 1, count + 1)
+    @(index + 1, count)
+} (0, 0)
