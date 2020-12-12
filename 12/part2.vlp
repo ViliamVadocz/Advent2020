@@ -1,0 +1,60 @@
+NORTH, EAST, SOUTH, WEST := 0, 1, 2, 3
+LEFT, RIGHT := -1, 1
+print := (str) {$$stdio\puts(&str)}
+
+abs := (x) {x < 0 -> -x; x}
+
+ferry := (position: position, waypoint: waypoint) {
+    ferry := @
+    east: east, north: north := position
+    east: wp_east, north: wp_north := waypoint
+
+    position: position,
+    waypoint: waypoint,
+
+    forward: (steps) {
+        ferry(position: (east: east + wp_east * steps, north: north + wp_north * steps), waypoint: waypoint)
+    },
+
+    turn: (direction, degrees) {
+        new_waypoint := {
+            degrees = 180 -> east: -wp_east, north: -wp_north
+            degrees = 90 && direction = LEFT || degrees = 270 && direction = RIGHT -> {
+                east: -wp_north, north: wp_east
+            }
+            degrees = 270 && direction = LEFT || degrees = 90 && direction = RIGHT -> {
+                east: wp_north, north: -wp_east
+            }
+            _ := print("waypoint turn confusion")
+            waypoint
+        }
+        ferry(position: position, waypoint: new_waypoint)
+    },
+
+    move: (cardinal_direction, steps) {
+        cardinal_direction = NORTH -> ferry({
+            position: position,
+            waypoint: (east: wp_east, north: wp_north + steps)
+        })
+        cardinal_direction = EAST -> ferry({
+            position: position,
+            waypoint: (east: wp_east + steps, north: wp_north)
+        })
+        cardinal_direction = SOUTH -> ferry({
+            position: position,
+            waypoint: (east: wp_east, north: wp_north - steps)
+        })
+        cardinal_direction = WEST -> ferry({
+            position: position,
+            waypoint: (east: wp_east - steps, north: wp_north)
+        })
+        _ := print("unknown cardinal direction\0")
+        ferry(position: position, waypoint: waypoint)
+    },
+
+    manhattan: () {
+        abs(east) + abs(north)
+    }
+}
+
+ferry

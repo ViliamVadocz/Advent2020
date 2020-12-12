@@ -1,0 +1,41 @@
+NORTH, EAST, SOUTH, WEST := 0, 1, 2, 3
+LEFT, RIGHT := -1, 1
+print := (str) {$$stdio\puts(&str)}
+
+abs := (x) {x < 0 -> -x; x}
+
+ferry := (facing: facing, position: position) {
+    ferry := @
+    east: east, north: north := position
+
+    facing: facing,
+    position: position,
+
+    forward: (steps) {
+        facing = NORTH -> ferry(facing: facing, position: (east: east, north: north + steps))
+        facing = EAST -> ferry(facing: facing, position: (east: east + steps, north: north))
+        facing = SOUTH -> ferry(facing: facing, position: (east: east, north: north - steps))
+        facing = WEST -> ferry(facing: facing, position: (east: east - steps, north: north))
+        _ := print("unknown facing\0")
+        ferry(facing: facing, position: position)
+    },
+
+    turn: (direction, degrees) {
+        ferry(facing: (facing + direction * (degrees / 90) + 4) % 4, position: position)
+    },
+
+    move: (cardinal_direction, steps) {
+        cardinal_direction = NORTH -> ferry(facing: facing, position: (east: east, north: north + steps))
+        cardinal_direction = EAST -> ferry(facing: facing, position: (east: east + steps, north: north))
+        cardinal_direction = SOUTH -> ferry(facing: facing, position: (east: east, north: north - steps))
+        cardinal_direction = WEST -> ferry(facing: facing, position: (east: east - steps, north: north))
+        _ := print("unknown cardinal direction\0")
+        ferry(facing: facing, position: position)
+    },
+
+    manhattan: () {
+        abs(east) + abs(north)
+    }
+}
+
+ferry

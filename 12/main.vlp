@@ -1,0 +1,45 @@
+NORTH, EAST, SOUTH, WEST := 0, 1, 2, 3
+LEFT, RIGHT := -1, 1
+print := (str) {$$stdio\puts(&str)}
+
+parse_int, int_to_char := $parse
+# ferry := $part1
+ferry := $part2
+
+
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+eof := () {$$stdio\feof(file) != 0}
+get_char := () {int_to_char($$stdio\fgetc(file))}
+
+step := (my_ferry) {
+    char := get_char()
+    buffer, len := (buffer, index) {
+        char := get_char()
+        eof() || char = '\n' -> buffer, index
+        buffer[index] := char
+        @(buffer, index + 1)
+    } (['\x00'; 3], 0)
+    num := parse_int(buffer, len)
+    char = 'N' -> my_ferry.move(NORTH, num)
+    char = 'E' -> my_ferry.move(EAST, num)
+    char = 'S' -> my_ferry.move(SOUTH, num)
+    char = 'W' -> my_ferry.move(WEST, num)
+    char = 'L' -> my_ferry.turn(LEFT, num)
+    char = 'R' -> my_ferry.turn(RIGHT, num)
+    char = 'F' -> my_ferry.forward(num)
+    _ := print("unknown instruction\0")
+    my_ferry
+}
+
+# part 1
+# my_ferry := ferry(facing: EAST, position: (east: 0, north: 0))
+# part 2
+my_ferry := ferry(position: (east: 0, north: 0), waypoint: (east: 10, north: 1))
+my_ferry := (my_ferry) {
+    eof() -> my_ferry
+    @(step(my_ferry))
+} (my_ferry)
+
+_ := $$stdio\fclose(file)
+
+my_ferry.manhattan()
