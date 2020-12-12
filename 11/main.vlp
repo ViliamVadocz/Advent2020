@@ -1,52 +1,129 @@
-seats := $input
-elems := 8827
-cols := 91
-rows := 97
+# elems := 8827
+# cols := 91
+# rows := 97
 
 T := 1 > 0
 F := !T
 
-all_match := (a, b) {
-    (index) {
-        index = |a| || {
-            a[index] -> b[index]
-            !b[index] 
-        } && @(index + 1)
-    } (0)
-}
+OCCUPIED, FLOOR, FREE, UNKNOWN := 25, 46, 76, 63
 
-step := (occupied) {
-    check := (index) {
-        0 <= index < |occupied| && seats[index] && occupied[index]
-    }
-    (new, index) {
-        index = |new| -> new
-        !seats[index] -> @(new, index + 1)
-        count := 0
-        count += {check(index - cols - 1)   -> 1; 0}
-        count += {check(index - cols)       -> 1; 0}
-        count += {check(index - cols + 1)   -> 1; 0}
-        count += {check(index - 1)          -> 1; 0}
-        count += {check(index + 1)          -> 1; 0}
-        count += {check(index + cols - 1)   -> 1; 0}
-        count += {check(index + cols)       -> 1; 0}
-        count += {check(index + cols + 1)   -> 1; 0}
-        new[index] := {
-            occupied[index] -> count < 4
-            count = 0
+open := $$stdio\fopen
+close := $$stdio\fclose
+eof := (file) {$$stdio\feof(file) != 0}
+getc := $$stdio\fgetc
+putc := $$stdio\fputc
+
+# get the next line of seats (extra for border of empty)
+line := (file) {
+    (index, row) {
+        index = |row.occupied| - 1 -> row
+        seat := getc(file)
+        occupied, floor := {
+            seat = OCCUPIED -> T, F
+            seat = FLOOR -> F, T
+            seat = FREE -> F, F
+            T, T
         }
-        @(new, index + 1)
-    } ([F; |seats|], 0)
+        eof(file) -> row
+        row.occupied[index] := occupied
+        row.floor[index] := floor
+        @(index + 1, row)
+    } (1, (occupied: [F; 93], floor: [F; 93]))
 }
 
-occupied := (occupied) {
-    new := step(occupied)
-    all_match(occupied, new) -> new
-    @(new)
-} ([F; |seats|])
+same := (filename1, filename2) {
+    file1 := open(&filename1, &"r\0")
+    file2 := open(&filename2, &"r\0")
+    same := () {
+        eof(file1) -> eof(file2)
+        eof(file2) -> F
+        getc(file1) = getc(file2) && @()
+    } ()
+    _ := close(file1)
+    _ := close(file2)
+    same
+}
 
-(index, count) {
-    index = |occupied| -> count
-    occupied[index] -> @(index + 1, count + 1)
-    @(index + 1, count)
-} (0, 0)
+count := (filename) {
+    file := open(&filename, &"r\0")
+    amount := (amount) {
+        amount += {getc(file) = OCCUPIED -> 1; 0}
+        eof(file) -> amount
+        @(amount)
+    } (0)
+    _ := close(file)
+    amount
+}
+
+copy := (from: from, to: to) {
+    from_file := open(&from, &"r\0")
+    to_file := open(&to, &"w\0")
+    _ := () {
+        char := getc(from_file)
+        eof(from_file) -> {}
+        _ := putc(char, to_file)
+        @()
+    } ()
+    _ := close(from_file)
+    _ := close(to_file)
+    {}
+}
+
+val := (bool) {bool -> 1; 0}
+border := () {occupied: [F; 93], floor: [T; 93]}
+
+step := (from: from, to: to) {
+    from_file := open(&from, &"r\0")
+    to_file := open(&to, &"w\0")
+
+    _ := (top, current, under) {
+        _ := (index) {
+            index = |top.occupied| - 1 -> {}
+            # floor does not change
+            current.floor[index] -> {
+                _ := putc(FLOOR, to_file)
+                @(index + 1)
+            }
+            # check seats around
+            count := 0
+            count += val(top.occupied[index - 1])
+            count += val(top.occupied[index])
+            count += val(top.occupied[index + 1])
+            count += val(current.occupied[index - 1])
+            count += val(current.occupied[index + 1])
+            count += val(under.occupied[index - 1])
+            count += val(under.occupied[index])
+            count += val(under.occupied[index + 1])
+            _ := {
+                current.occupied[index] && count < 4 || !current.occupied[index] && count = 0 -> putc(OCCUPIED, to_file)
+                putc(FREE, to_file)
+            }
+            @(index + 1)
+        } (1)
+
+        # shift rows, read a new one into memory
+        top := current
+        current := under
+        under := {
+            eof(from_file) -> border()
+            line(from_file)
+        }
+        @(top, current, under)
+    } (border(), line(from_file), line(from_file))
+
+    _ := close(from_file)
+    _ := close(to_file)
+    {}
+}
+
+# # # # #
+
+_ := copy(from: "input.txt\0", to: "prev.txt\0")
+
+() {
+    _ := $$stdio\puts(&"step\0")
+    same("prev.txt\0", "new.txt\0") -> count("new.txt\0")
+    _ := copy(from: "new.txt\0", to: "prev.txt\0")
+    _ := step(from: "prev.txt\0", to: "new.txt\0")
+    @()
+} ()
