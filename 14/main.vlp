@@ -1,0 +1,165 @@
+# bools
+T := 1 > 0
+F := !T
+
+# import
+parse_int, int_to_char := $parse
+to_bool_arr, from_bool_arr := $bool_arr
+
+# wrapper funcs
+eof := (file) { $$stdio\feof(file) != 0 }
+get_char := (file) { 
+    c := $$stdio\fgetc(file)
+    _ := $$stdio\putchar(c)
+    int_to_char(c)
+}
+
+
+find := (elem: elem, in: arr, up_to: max) {
+    (index) {
+        index = |arr| || index = max -> -1
+        arr[index] = elem -> index
+        @(index + 1)
+    } (0)
+}
+
+apply := (mask: (overwrite: overwrite, values: values), to: number) {
+    out := (index, out) {
+        index = |out| -> out
+        out[index] := {overwrite[index] -> values[index]; out[index]}
+        @(index + 1, out)
+    } (0, to_bool_arr(number))
+    from_bool_arr(out)
+}
+
+# machine definition
+machine := ((
+    cells: cells,
+    positions: positions,
+    filled_amount: filled_amount,
+    mask: mask
+)) {
+    machine := @
+
+    # uncomment these to make them public:
+
+    # cells: cells,
+    # positions: positions,
+    # filled_amount: filled_amount,
+    # mask: mask,
+
+    mem_instruction: (position: position, cell: cell) {
+        index := find(elem: position, in: positions, up_to: filled_amount)
+        value := apply(mask: mask, to: cell)
+        # overwrite existing cell
+        index != -1 -> {
+            cells[index] := cell
+            machine ((
+                cells: cells,
+                positions: positions,
+                filled_amount: filled_amount,
+                mask: mask
+            ))
+        }
+        # new cell needed
+        positions[filled_amount] := position
+        cells[filled_amount] := cell
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount + 1,
+            mask: mask
+        ))
+    },
+
+    mask_instruction: (mask: new_mask) {
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount,
+            mask: new_mask
+        ))
+    },
+
+    sum: () {
+        (index, sum) {
+            index = filled_amount -> sum
+            @(index + 1, sum + cells[index])
+        } (0, 0)
+    }
+}
+
+# machine constructor
+new_machine := (mask: inital_mask) {
+    machine ((
+        cells: [0; 600],
+        positions: [0; 600],
+        filled_amount: 0,
+        mask: inital_mask
+    ))
+}
+
+# parsing input
+parse_mask := (file) {
+    (index, overwrite, values) {
+        char := get_char(file)
+        char = '\n' || eof(file) -> overwrite: overwrite, values: values
+        char = 'X' -> @(index + 1, overwrite, values)
+        char = '0' -> {
+            overwrite[index] := T
+            @(index + 1, overwrite, values)
+        }
+        char = '1' -> {
+            overwrite[index] := T
+            values[index] := T
+            @(index + 1, overwrite, values)
+        }
+        # ignore non X,0,1 chars
+        @(index, overwrite, values)
+    } (0, [F; 36], [F; 36])
+}
+
+step := (machine, file) {
+    is_mask := (index) {
+        index = 4 || (get_char(file) = "mask"[index]) && @(index + 1)
+    } (0)
+    is_mask -> {
+        mask := parse_mask(file)
+        done: eof(file), machine: machine.mask_instruction(mask: mask)
+    }
+
+    # otherwise it's a mem[NUM] = NUM instruction
+    # skip until we're at '['
+    _ := () { get_char(file) = '[' -> {}; @() } ()
+
+    # read and parse the number ending at ']'
+    pos := (index, buffer) {
+        char := get_char(file)
+        char = ']' -> parse_int(buffer, index)
+        buffer[index] := char
+        @(index + 1, buffer)
+    } (0, ['\x00'; 16])
+
+    # skip until we get the next num
+    num_buffer := ['\x00'; 16]
+    num_buffer[0] := () { char := get_char(file); '0' <= char <= '9' -> char; @() } ()
+    num := (index, buffer) {
+        char := get_char(file)
+        char = '\n' || eof(file) -> parse_int(buffer, index)
+        buffer[index] := char
+        @(index + 1, buffer)
+    } (1, num_buffer)
+
+    done: eof(file), machine: machine.mem_instruction(position: pos, cell: num)
+}
+
+# main
+file := $$stdio\fopen(&"input.txt\0", &"r\0")
+sum := (machine) {
+    done: done, machine: machine := step(machine, file)
+    done -> machine.sum()
+    @(machine)
+} (new_machine(mask: parse_mask(file)))
+_ := $$stdio\fclose(file)
+_ := $$stdio\puts(&"\0")
+sum

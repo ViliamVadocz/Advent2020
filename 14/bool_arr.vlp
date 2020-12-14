@@ -1,0 +1,20 @@
+T := 1 > 0
+F := !T
+
+to_bool_arr := (num) {
+    (arr, index, n) {
+        n = 0 -> arr
+        arr[index] := n % 2 = 1
+        @(arr, index - 1, n / 2)
+    } ([F; 36], 35, num)
+}
+
+from_bool_arr := (arr) {
+    (index, num, bit) {
+        index < 0 -> num
+        arr[index] -> @(index - 1, num + bit, bit * 2)
+        @(index - 1, num, bit * 2)
+    } (|arr| - 1, 0, 1)
+}
+
+to_bool_arr, from_bool_arr
