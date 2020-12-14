@@ -1,0 +1,69 @@
+timestamp, busses := $input
+
+# part 1
+# get_wait := (x) {
+#     x - (timestamp % x)
+# }
+
+# better := (a, b) {
+#     a = 0 -> b
+#     get_wait(a) < get_wait(b) -> a
+#     b
+# }
+
+# best_id := (index, best_id) {
+#     index = |busses| -> best_id
+#     id := busses[index]
+#     id = 0 -> @(index + 1, best_id)
+#     @(index + 1, better(best_id, id))
+# } (0, 0)
+
+# best_wait := get_wait(best_id)
+# id: best_id, wait: best_wait, product: best_id * best_wait
+
+##### ##### #####
+
+# part 2
+map, map2, map3 := $map
+
+# there are 9 bus ids in the busses array
+ids, times := (bus_index, index, ids, times) {
+    bus_index = |busses| || index = |ids| -> ids, times
+    bus_id := busses[bus_index]
+    bus_id = 0 -> @(bus_index + 1, index, ids, times)
+    ids[index] := bus_id
+    times[index] := bus_index
+    @(bus_index + 1, index + 1, ids, times)
+} (0, 0, [0; 9], [0; 9])
+
+# use chinese remainder theorem
+
+N := (index, product) {
+    index = |ids| -> product
+    @(index + 1, product * ids[index])
+} (0, 1)
+
+Ni := map(ids, (id) {N / id})
+
+remainders := map2(times, ids, (time, id) {
+    mod := -time % id
+    mod < 0 -> mod + id
+    mod
+})
+
+# inverse of Ni
+inverses := map2(Ni, ids, (n, id) {
+    # solve n * x = 1 (mod id)
+    (x) {
+        (n * x) % id = 1 -> x
+        @(x + 1)
+    } (1)
+})
+
+products := map3(remainders, Ni, inverses, (rem, n, x) { rem * n * x })
+sum := (index, sum) {
+    index = |products| -> sum
+    @(index + 1, sum + products[index])
+} (0, 0)
+
+sum % N

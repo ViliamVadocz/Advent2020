@@ -1,0 +1,25 @@
+map := (arr, func) {
+    (index, res) {
+        index = |res| -> res
+        res[index] := func(arr[index])
+        @(index + 1, res)
+    } (0, arr)
+}
+
+map2 := (arr1, arr2, func) {
+    (index, res) {
+        index = |res| -> res
+        res[index] := func(arr1[index], arr2[index])
+        @(index + 1, res)
+    } (0, arr1)
+}
+
+map3 := (arr1, arr2, arr3, func) {
+    (index, res) {
+        index = |res| -> res
+        res[index] := func(arr1[index], arr2[index], arr3[index])
+        @(index + 1, res)
+    } (0, arr1)
+}
+
+map, map2, map3
