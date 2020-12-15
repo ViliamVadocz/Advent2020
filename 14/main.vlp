@@ -8,11 +8,7 @@ to_bool_arr, from_bool_arr := $bool_arr
 
 # wrapper funcs
 eof := (file) { $$stdio\feof(file) != 0 }
-get_char := (file) { 
-    c := $$stdio\fgetc(file)
-    _ := $$stdio\putchar(c)
-    int_to_char(c)
-}
+get_char := (file) { int_to_char($$stdio\fgetc(file)) }
 
 
 find := (elem: elem, in: arr, up_to: max) {
@@ -43,17 +39,17 @@ machine := ((
 
     # uncomment these to make them public:
 
-    # cells: cells,
-    # positions: positions,
-    # filled_amount: filled_amount,
-    # mask: mask,
+    cells: cells,
+    positions: positions,
+    filled_amount: filled_amount,
+    mask: mask,
 
     mem_instruction: (position: position, cell: cell) {
         index := find(elem: position, in: positions, up_to: filled_amount)
         value := apply(mask: mask, to: cell)
         # overwrite existing cell
         index != -1 -> {
-            cells[index] := cell
+            cells[index] := value
             machine ((
                 cells: cells,
                 positions: positions,
@@ -63,7 +59,7 @@ machine := ((
         }
         # new cell needed
         positions[filled_amount] := position
-        cells[filled_amount] := cell
+        cells[filled_amount] := value
         machine ((
             cells: cells,
             positions: positions,
@@ -92,8 +88,8 @@ machine := ((
 # machine constructor
 new_machine := (mask: inital_mask) {
     machine ((
-        cells: [0; 600],
-        positions: [0; 600],
+        cells: [0; 500],
+        positions: [0; 500],
         filled_amount: 0,
         mask: inital_mask
     ))
@@ -161,5 +157,14 @@ sum := (machine) {
     @(machine)
 } (new_machine(mask: parse_mask(file)))
 _ := $$stdio\fclose(file)
-_ := $$stdio\puts(&"\0")
 sum
+
+# test
+# file := $$stdio\fopen(&"test.txt\0", &"r\0")
+# m := (machine, debug_steps) {
+#     done: done, machine: machine := step(machine, file)
+#     done || debug_steps = 0 -> machine
+#     @(machine, debug_steps + 1)
+# } (new_machine(mask: parse_mask(file)), 0)
+# _ := $$stdio\fclose(file)
+# m
