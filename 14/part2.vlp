@@ -1,0 +1,86 @@
+T := 1 > 0
+F := !T
+
+to_bool_arr, from_bool_arr := $bool_arr
+find := $find
+
+# machine definition
+machine := ((
+    cells: cells,
+    positions: positions,
+    filled_amount: filled_amount,
+    mask: mask
+)) {
+    machine := @
+
+    # uncomment these to make them public:
+
+    # cells: cells,
+    # positions: positions,
+    # filled_amount: filled_amount,
+    # mask: mask,
+
+    mem_instruction: (position: position, cell: cell) {
+        # cell stays the same
+        # apply mask to position
+        # floating are both 0 and 1
+        cells, positions, filled_amount := (cells, positions, filled_amount, pos, index) {
+            index = |mask.set| -> {
+                pos := from_bool_arr(pos)
+                index := find(elem: pos, in: positions, up_to: filled_amount)
+                # recognize the address
+                index != -1 -> {
+                    cells[index] := cell
+                    cells, positions, filled_amount
+                }
+                # new address
+                cells[filled_amount] := cell
+                positions[filled_amount] := pos
+                filled_amount += 1
+                cells, positions, filled_amount
+            }
+            # mask is set
+            mask.set[index] -> {
+                # overwrite with 1
+                mask.values[index] -> {
+                    pos[index] := T
+                    @(cells, positions, filled_amount, pos, index + 1)
+                }
+                # keep original
+                @(cells, positions, filled_amount, pos, index + 1)
+            }
+            # floating bit
+            pos[index] := T
+            cells, positions, filled_amount := @(cells, positions, filled_amount, pos, index + 1)
+            pos[index] := F
+            @(cells, positions, filled_amount, pos, index + 1)
+        } (cells, positions, filled_amount, to_bool_arr(position), 0)
+
+        _ := {filled_amount > |positions| -> $$stdio\puts(&"doesn't fit!\0"); 0}
+
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount,
+            mask: mask
+        ))
+    },
+
+    mask_instruction: (mask: new_mask) {
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount,
+            mask: new_mask
+        ))
+    },
+
+    sum: () {
+        (index, sum) {
+            index = filled_amount -> sum
+            @(index + 1, sum + cells[index])
+        } (0, 0)
+    }
+}
+
+machine

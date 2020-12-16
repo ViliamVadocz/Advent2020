@@ -1,0 +1,9 @@
+find := (elem: elem, in: arr, up_to: max) {
+    (index) {
+        index = |arr| || index = max -> -1
+        arr[index] = elem -> index
+        @(index + 1)
+    } (0)
+}
+
+find

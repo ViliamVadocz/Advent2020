@@ -1,0 +1,70 @@
+to_bool_arr, from_bool_arr := $bool_arr
+find := $find
+
+apply := (mask: (set: set, values: values), to: number) {
+    out := (index, out) {
+        index = |out| -> out
+        out[index] := {set[index] -> values[index]; out[index]}
+        @(index + 1, out)
+    } (0, to_bool_arr(number))
+    from_bool_arr(out)
+}
+
+# machine definition
+machine := ((
+    cells: cells,
+    positions: positions,
+    filled_amount: filled_amount,
+    mask: mask
+)) {
+    machine := @
+
+    # uncomment these to make them public:
+
+    # cells: cells,
+    # positions: positions,
+    # filled_amount: filled_amount,
+    # mask: mask,
+
+    mem_instruction: (position: position, cell: cell) {
+        index := find(elem: position, in: positions, up_to: filled_amount)
+        value := apply(mask: mask, to: cell)
+        # overwrite existing cell
+        index != -1 -> {
+            cells[index] := value
+            machine ((
+                cells: cells,
+                positions: positions,
+                filled_amount: filled_amount,
+                mask: mask
+            ))
+        }
+        # new cell needed
+        positions[filled_amount] := position
+        cells[filled_amount] := value
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount + 1,
+            mask: mask
+        ))
+    },
+
+    mask_instruction: (mask: new_mask) {
+        machine ((
+            cells: cells,
+            positions: positions,
+            filled_amount: filled_amount,
+            mask: new_mask
+        ))
+    },
+
+    sum: () {
+        (index, sum) {
+            index = filled_amount -> sum
+            @(index + 1, sum + cells[index])
+        } (0, 0)
+    }
+}
+
+machine
